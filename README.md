@@ -1,7 +1,7 @@
 # cexp (elisp-library)
 Poorman's implementation of combined expressions.
 Combined expressions are combinations of regular expressions and balanced expressions.
-You can use cexp-search-forward for searching combined expressions.
+You can use `cexp-search-forwar` for searching combined expressions.
 Some clumsy way of storing the match-data and the balanced expressions is provided.
 
 Example: You can search for definitions in TeX-files via the cexp
