@@ -27,6 +27,8 @@
 ;; testcase1(first sexp [encapsulated sexp])
 ;; Some text between testcase1 and testcase2.
 ;; testcase2(only one sexp)
+;; TeX-testcase:
+;; \def\mdo#1{{\def\next{\relax}\def\tmp{#1}\ifx\next\tmp\else\def\next{#1\mdo}\expandafter}\next}
 
 (require 'cexp)
 (require 'cl-lib)
@@ -57,6 +59,16 @@
     (cl-assert (string= (match-string 2) (car patterns)) "Test1: The sexps don't have the expected values")
     (setq patterns (cdr patterns)))
   (cl-assert (null patterns) "Test1: Not all patterns have been found."))
+
+;; Test4: TeX-testcase
+(with-syntax-table (copy-syntax-table)
+  (modify-syntax-entry ?\{ "(")
+  (modify-syntax-entry ?\} ")")
+  (goto-char (point-min))
+  (cexp-search-forward "\\\\def\\\\[[:alpha:]]+\\(#[0-9]\\)*\\!(^{.*}$\\!)") ;; Barfs if TeX definition is not found.
+  (assert (string= (match-string 1) "\\def\\mdo#1") t)
+  (assert (string= (match-string 2) "#1") t)
+  (assert (string= (match-string 3) "{{\\def\\next{\\relax}\\def\\tmp{#1}\\ifx\\next\\tmp\\else\\def\\next{#1\\mdo}\\expandafter}\\next}") t))
 
 (message "cexp-test done")
 
