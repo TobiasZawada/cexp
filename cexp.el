@@ -56,7 +56,7 @@ string itself."
 	      (> start 0)
 	      (= ?\\ (elt cexp (1- start))))
     (setq start (1+ start)))
-  (cons start (match-string-no-properties 1 cexp)))
+  (and start (cons start (match-string-no-properties 1 cexp))))
 
 (defun cexp-find-top-sexp (cexp &optional start)
   "Returns a cons (BEG . END) of the beginning position BEG and the end position END of the first
