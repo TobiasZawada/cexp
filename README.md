@@ -22,7 +22,7 @@ The search via `cexp-search-forward` with the above cexp returns the limits for 
 4. The limits of the balanced expression, i.e., `{{\def\next{\relax}\def\tmp{#1}\ifx\next\tmp\else\def\next{#1\mdo}\expandafter}\next}`
 
 
-## An example from [emacs.stackexchange.com](https://emacs.stackexchange.com/questions/30432/how-can-i-select-only-the-content-of-a-media-in-css-with-regexp-in-emacs) matching the content of @media
+## An example from [emacs.stackexchange.com](https://emacs.stackexchange.com/questions/30432/how-can-i-select-only-the-content-of-a-media-in-css-with-regexp-in-emacs) matching the content of `@media` in css files
 
     /*... css above*/
     /*tablet*/
