@@ -24,6 +24,9 @@ The search via `cexp-search-forward` with the above cexp returns the limits for 
 
 ## An example from [emacs.stackexchange.com](https://emacs.stackexchange.com/questions/30432/how-can-i-select-only-the-content-of-a-media-in-css-with-regexp-in-emacs) matching the content of `@media` in css files
 
+Assme you want to highlight the content in parenteses and curly brackets behind @media entries of css files.
+There you need to find `@media` followed by two balanced expressions.
+
     /*... css above*/
     /*tablet*/
     @media (max-width: 800px){
@@ -39,7 +42,7 @@ The search via `cexp-search-forward` with the above cexp returns the limits for 
     }
     /*more css below...*/
 
-you can use the following elisp expression:
+You can use the following elisp expression:
 
 `(cexp-search-forward "@media *\\!(.*\\!) *\\!(.*\\!)")`
 
