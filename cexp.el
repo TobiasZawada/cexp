@@ -4,6 +4,8 @@
 ;; Author: Tobias.Zawada <i@tn-home.de>
 ;; Keywords: lisp, matching
 ;; Version: 0.0.1
+;; URL: https://github.com/TobiasZawada/cexp
+;; Package-Requires: ((emacs "25.1"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -23,8 +25,7 @@
 ;; Poorman's implementation of combined expressions.
 ;; Combined expressions are combinations of regular expressions and balanced expressions.
 ;; You can use cexp-search-forward for searching combined expressions.
-;; Some clumsy way of storing the match-data and the balanced expressions is provided.
-;; That is just a test implementation.
+;; Some way of storing the match-data and the balanced expressions is provided.
 ;; Example:
 ;; (setq var-match-data (cexp-search-forward "foo\\!(\\`(\\([[:alpha:]][[:alnum:]]*\\)\\(,[[:alpha:]][[:alnum:]]*\\)*)\\'\\!)"))
 ;; This combined expression matches the following string:
@@ -44,14 +45,27 @@
 ;; - Added functionality of the arguments BOUND NOERROR and COUNT
 ;; - Return start position of match instead of match-data
 ;;
+;; 2019-10-13:
+;; - Make cexp ready for melpa.
+;;
 ;;; Code:
-(defvar cexp-start "!(" "Start control string of balanced expression within regular expression.")
-(defvar cexp-end "!)" "End control string of balanced expression within regular expression.")
+(defcustom cexp-start "!("
+  "Start control string of balanced expression within regular expression."
+  :type 'string
+  :group 'cexp)
+
+(defcustom cexp-end "!)"
+  "End control string of balanced expression within regular expression."
+  :type 'string
+  :group 'cexp)
+
 (defun cexp-find-special (cexp &optional cexp-re start)
-  "Finds balanced special strings for sexp within cexp. Returns
-cons with start position of the special string and the special
+  "Find first balanced special string for sexp within CEXP after START.
+CEXP-RE is the regular expression matching either beginning or end of a sexp.
+Returns cons with start position of the special string and the special
 string itself."
-  (or cexp-re (setq cexp-re (concat "\\(" cexp-start "\\|" cexp-end "\\)")))
+  (unless cexp-re
+    (setq cexp-re (concat "\\(" cexp-start "\\|" cexp-end "\\)")))
   (while (and (setq start (string-match (concat "\\\\" cexp-re) cexp start))
 	      (> start 0)
 	      (= ?\\ (elt cexp (1- start))))
@@ -59,18 +73,21 @@ string itself."
   (and start (cons start (match-string-no-properties 1 cexp))))
 
 (defun cexp-find-top-sexp (cexp &optional start)
-  "Returns a cons (BEG . END) of the beginning position BEG and the end position END of the first
-top-level sexp control string in CEXP.
-The sexp control string is delimited by the strings defined in `cexp-start' and `cexp-end'.
-BEG points to the start string `cexp-start' within cexp and END points at the character behind end string `cexp-end' or to the end of CEXP.
-"
+  "Return info about the first top level sexp in CEXP after START.
+The return value is a cons (BEG . END)
+of the beginning position BEG and the end position END of that sexp.
+
+The sexp control string is delimited
+by the strings defined in `cexp-start' and `cexp-end'.
+BEG points to the start string `cexp-start' within cexp and
+END points at the character behind end string `cexp-end' or to the end of CEXP."
   (let* ((cexp-re (concat "\\(" cexp-start "\\|" cexp-end "\\)"))
 	 (c (cexp-find-special cexp cexp-re start))
 	 (b (car c)))
     (if (setq start b)
 	(progn
 	  (setq start (1+ start))
-	  (unless (string= (cdr c) cexp-start) (error "Unbalanced cexp."))
+	  (unless (string= (cdr c) cexp-start) (error "Unbalanced cexp"))
 	  (let ((cnt 1))
 	    (while (and
 		    (> cnt 0)
@@ -84,8 +101,12 @@ BEG points to the start string `cexp-start' within cexp and END points at the ch
       nil)))
 
 (defun cexp-search-forward1 (cexp &optional var-match-data bound)
-  "Internal driver for `cexp-search-forward1'.
-Returns the match-data for all matching groups."
+  "Internal driver for `cexp-search-forward'.
+Decomposes CEXP into regexps and sexps, searches for the regexps
+and recursively the stuff of the sexps which can be again regexps and sexps.
+VAR-MATCH-DATA contains the match data collected so far.
+BOUND delimits the search like in `search-forward'.
+Returns the match data for all matching groups."
   (let* ((sexpBegEnd (cexp-find-top-sexp cexp))
 	 (endRegexp (if sexpBegEnd (car sexpBegEnd)))
 	 (re (substring cexp 0 endRegexp)))
@@ -112,11 +133,20 @@ Returns the match-data for all matching groups."
 		  var-match-data))
 	var-match-data))))
 
+;;;###autoload
 (defun cexp-search-forward (cexp &optional bound noerror count)
-  "Search for combined regular and balanced expressions (cexp).
-The syntax of cexp is almost that of a regular expression with the exception that the string \\!( introduces a balanced expression and \\!) closes a balanced expression. The matched balanced expressions and the matches for the regular expressions before, in between, and after the sexps appear in the match data.
-Regular expression braces \\( and \\) may not include balanced expressions (sexps).
-On the other hand balanced expressions may include regular expressions with groups."
+  "Search for combined regular and balanced expression CEXP.
+The syntax of CEXP is almost that of a regular expression
+with the exception that the string \\!( introduces a balanced expression
+and \\!) closes a balanced expression.
+The matched balanced expressions and the matches for the regular expressions
+before, in between, and after the sexps appear in the match data.
+Regular expression braces \\( and \\) may not include balanced expressions.
+On the other hand balanced expressions may include
+regular expressions with groups.
+
+The optional parameters BOUND, NOERROR, AND COUNT
+work like for `search-forward'."
   (interactive "sCombined regexp and sexp:")
   (let (var-match-data
 	(counter (or count 1))
@@ -131,10 +161,19 @@ On the other hand balanced expressions may include regular expressions with grou
 	(let ((group0 (list (car var-match-data) (apply 'max var-match-data))))
 	  (setq var-match-data (append group0 var-match-data))
 	  (set-match-data var-match-data)
-	  (goto-char (cadr var-match-data))
-	  (car var-match-data))
+	  (goto-char (cadr var-match-data)))
       (if noerror
-	  (set-match-data nil)
+	  (progn
+	    (unless (eq noerror t)
+	      (goto-char (or bound (point-max))))
+	    (set-match-data nil))
 	(signal 'search-failed cexp)))))
 
+(defun cexp-isearch-forward ()
+  "Call function `isearch-forward' with variable `isearch-search-fun-function' bound to symbol `cexp-search-forward'."
+  (interactive)
+  (let ((isearch-search-fun-function (lambda () #'cexp-search-forward)))
+    (isearch-forward)))
+
 (provide 'cexp)
+;;; cexp.el ends here
